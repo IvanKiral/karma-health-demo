@@ -9,34 +9,15 @@ import { useSearchParams } from "react-router-dom";
 import { defaultPortableRichTextResolvers, isEmptyRichText } from "../utils/richtext";
 import { PortableText } from "@portabletext/react";
 import { transformToPortableText } from "@kontent-ai/rich-text-resolver";
-import { IUpdateMessageData, applyUpdateOnItemAndLoadLinkedItems } from "@kontent-ai/smart-link";
-import { useLivePreview } from "../context/SmartLinkContext";
+import { IUpdateMessageData, IRefreshMessageData, IRefreshMessageMetadata, applyUpdateOnItemAndLoadLinkedItems } from "@kontent-ai/smart-link";
+import { useLivePreview, useCustomRefresh } from "../context/SmartLinkContext";
 import { createElementSmartLink, createItemSmartLink } from "../utils/smartlink";
 
 const useServicesPage = (isPreview: boolean, lang: string | null) => {
   const { environmentId, apiKey } = useAppContext();
   const [page, setPage] = useState<Page | null>(null);
 
-  const handleLiveUpdate = useCallback((data: IUpdateMessageData) => {
-    if (page && data.item.codename === page.system.codename) {
-      // Use applyUpdateOnItemAndLoadLinkedItems to ensure all linked content is updated
-      applyUpdateOnItemAndLoadLinkedItems(
-        page,
-        data,
-        (codenamesToFetch) => createClient(environmentId, apiKey, isPreview)
-          .items()
-          .inFilter("system.codename", [...codenamesToFetch])
-          .toPromise()
-          .then(res => res.data.items)
-      ).then((updatedItem) => {
-        if (updatedItem) {
-          setPage(updatedItem as Page);
-        }
-      });
-    }
-  }, [page, environmentId, apiKey, isPreview]);
-
-  useEffect(() => {
+  const refetch = useCallback(() => {
     createClient(environmentId, apiKey, isPreview)
       .item<Page>("services")
       .languageParameter((lang ?? "default") as LanguageCodenames)
@@ -53,7 +34,41 @@ const useServicesPage = (isPreview: boolean, lang: string | null) => {
       });
   }, [environmentId, apiKey, isPreview, lang]);
 
+  const handleLiveUpdate = useCallback((data: IUpdateMessageData) => {
+    if (page && data.item.codename === page.system.codename) {
+      applyUpdateOnItemAndLoadLinkedItems(
+        page,
+        data,
+        (codenamesToFetch) => createClient(environmentId, apiKey, isPreview)
+          .items()
+          .inFilter("system.codename", [...codenamesToFetch])
+          .toPromise()
+          .then(res => res.data.items)
+      ).then((updatedItem) => {
+        if (updatedItem) {
+          setPage(updatedItem as Page);
+        }
+      });
+    }
+  }, [page, environmentId, apiKey, isPreview]);
+
+  const onRefresh = useCallback(
+    (_: IRefreshMessageData, metadata: IRefreshMessageMetadata, originalRefresh: () => void) => {
+      if (metadata.manualRefresh) {
+        originalRefresh();
+      } else {
+        refetch();
+      }
+    },
+    [refetch],
+  );
+
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
   useLivePreview(handleLiveUpdate);
+  useCustomRefresh(onRefresh);
 
   return page;
 };
@@ -62,35 +77,7 @@ const useServices = (isPreview: boolean, lang: string | null) => {
   const { environmentId, apiKey } = useAppContext();
   const [services, setServices] = useState<Service[]>([]);
 
-  const handleLiveUpdate = useCallback((data: IUpdateMessageData) => {
-    // Update the specific service in the list
-    setServices(prevServices => {
-      return prevServices.map(service => {
-        if (service.system.codename === data.item.codename) {
-          // Apply the update and handle the Promise
-          applyUpdateOnItemAndLoadLinkedItems(
-            service,
-            data,
-            (codenamesToFetch) => createClient(environmentId, apiKey, isPreview)
-              .items()
-              .inFilter("system.codename", [...codenamesToFetch])
-              .toPromise()
-              .then(res => res.data.items)
-          ).then((updatedItem) => {
-            if (updatedItem) {
-              setServices(prev => prev.map(s => 
-                s.system.codename === data.item.codename ? updatedItem as Service : s
-              ));
-            }
-          });
-          return service; // Return the current service while waiting for the update
-        }
-        return service;
-      });
-    });
-  }, [environmentId, apiKey, isPreview]);
-
-  useEffect(() => {
+  const refetch = useCallback(() => {
     createClient(environmentId, apiKey, isPreview)
       .items<Service>()
       .type("service")
@@ -108,7 +95,49 @@ const useServices = (isPreview: boolean, lang: string | null) => {
       });
   }, [environmentId, apiKey, isPreview, lang]);
 
+  const handleLiveUpdate = useCallback((data: IUpdateMessageData) => {
+    setServices(prevServices => {
+      return prevServices.map(service => {
+        if (service.system.codename === data.item.codename) {
+          applyUpdateOnItemAndLoadLinkedItems(
+            service,
+            data,
+            (codenamesToFetch) => createClient(environmentId, apiKey, isPreview)
+              .items()
+              .inFilter("system.codename", [...codenamesToFetch])
+              .toPromise()
+              .then(res => res.data.items)
+          ).then((updatedItem) => {
+            if (updatedItem) {
+              setServices(prev => prev.map(s => 
+                s.system.codename === data.item.codename ? updatedItem as Service : s
+              ));
+            }
+          });
+          return service;
+        }
+        return service;
+      });
+    });
+  }, [environmentId, apiKey, isPreview]);
+
+  const onRefresh = useCallback(
+    (_: IRefreshMessageData, metadata: IRefreshMessageMetadata, originalRefresh: () => void) => {
+      if (metadata.manualRefresh) {
+        originalRefresh();
+      } else {
+        refetch();
+      }
+    },
+    [refetch],
+  );
+
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
   useLivePreview(handleLiveUpdate);
+  useCustomRefresh(onRefresh);
 
   return services;
 };
