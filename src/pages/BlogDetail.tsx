@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from "react";
+import React, { useCallback } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { createClient } from "../utils/client";
 import { useAppContext } from "../context/AppContext";
@@ -13,61 +13,7 @@ import {
   createElementSmartLink,
   createItemSmartLink,
 } from "../utils/smartlink";
-import { useQuery } from "@tanstack/react-query";
-
-const useBlogPost = (slug: string | undefined, isPreview: boolean, lang: string | null) => {
-  const { environmentId, apiKey } = useAppContext();
-  const [blogPost, setBlogPost] = useState<BlogPost | null>(null);
-
-  const handleLiveUpdate = useCallback((data: IUpdateMessageData) => {
-    if (blogPost && data.item.codename === blogPost.system.codename) {
-      // Use applyUpdateOnItemAndLoadLinkedItems to ensure all linked content is updated
-      applyUpdateOnItemAndLoadLinkedItems(
-        blogPost,
-        data,
-        (codenamesToFetch) => createClient(environmentId, apiKey, isPreview)
-          .items()
-          .inFilter("system.codename", [...codenamesToFetch])
-          .toPromise()
-          .then(res => res.data.items as BlogPost[])
-      ).then((updatedItem) => {
-        if (updatedItem) {
-          setBlogPost(updatedItem as BlogPost);
-        }
-      });
-    }
-  }, [blogPost, environmentId, apiKey, isPreview]);
-
-  useEffect(() => {
-    if (slug) {
-      createClient(environmentId, apiKey, isPreview)
-        .items<BlogPost>()
-        .type("blog_post")
-        .equalsFilter("elements.url_slug", slug)
-        .languageParameter((lang ?? "default") as LanguageCodenames)
-        .toPromise()
-        .then((res) => {
-          const item = res.data.items[0];
-          if (item) {
-            setBlogPost(item);
-          } else {
-            setBlogPost(null);
-          }
-        })
-        .catch((err) => {
-          if (err instanceof DeliveryError) {
-            setBlogPost(null);
-          } else {
-            throw err;
-          }
-        });
-    }
-  }, [slug, environmentId, apiKey, isPreview, lang]);
-
-  useLivePreview(handleLiveUpdate);
-
-  return blogPost;
-};
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const BlogDetail: React.FC = () => {
   const { environmentId, apiKey } = useAppContext();
@@ -75,22 +21,16 @@ const BlogDetail: React.FC = () => {
   const [searchParams] = useSearchParams();
   const isPreview = searchParams.get("preview") === "true";
   const lang = searchParams.get("lang");
+  const queryClient = useQueryClient();
 
-  const blogPost = useBlogPost(slug, isPreview, lang);
-
-  const createTag = (tag: string) => (
-    <div className="w-fit text-small border tracking-wider font-[700] text-grey border-azure px-4 py-2 rounded-lg uppercase">
-      {tag}
-    </div>
-  );
-
-  const blogPostData = useQuery({
-    queryKey: [`blog-post_${slug}`],
+  const blogPostQuery = useQuery({
+    queryKey: [`blog-post_${slug}`, isPreview, lang],
     queryFn: () =>
       createClient(environmentId, apiKey, isPreview)
         .items<BlogPost>()
         .type("blog_post")
         .equalsFilter("elements.url_slug", slug ?? "")
+        .languageParameter((lang ?? "default") as LanguageCodenames)
         .toPromise()
         .then((res) => res.data.items[0])
         .catch((err) => {
@@ -101,25 +41,53 @@ const BlogDetail: React.FC = () => {
         }),
   });
 
+  const handleLiveUpdate = useCallback((data: IUpdateMessageData) => {
+    if (blogPostQuery.data && data.item.codename === blogPostQuery.data.system.codename) {
+      applyUpdateOnItemAndLoadLinkedItems(
+        blogPostQuery.data,
+        data,
+        (codenamesToFetch) => createClient(environmentId, apiKey, isPreview)
+          .items()
+          .inFilter("system.codename", [...codenamesToFetch])
+          .toPromise()
+          .then(res => res.data.items as BlogPost[])
+      ).then((updatedItem) => {
+        if (updatedItem) {
+          queryClient.setQueryData([`blog-post_${slug}`, isPreview, lang], updatedItem);
+        }
+      });
+    }
+  }, [blogPostQuery.data, environmentId, apiKey, isPreview, slug, lang, queryClient]);
+
+  useLivePreview(handleLiveUpdate);
+
   const onRefresh = useCallback(
     (_: IRefreshMessageData, metadata: IRefreshMessageMetadata, originalRefresh: () => void) => {
       if (metadata.manualRefresh) {
         originalRefresh();
       } else {
-        blogPostData.refetch();
+        blogPostQuery.refetch();
       }
     },
-    [blogPostData],
+    [blogPostQuery],
   );
 
   useCustomRefresh(onRefresh);
+
+  const blogPost = blogPostQuery.data;
 
   if (!blogPost) {
     return <div className="flex-grow" />;
   }
 
+  const createTag = (tag: string) => (
+    <div className="w-fit text-small border tracking-wider font-[700] text-grey border-azure px-4 py-2 rounded-lg uppercase">
+      {tag}
+    </div>
+  );
+
   return (
-    <div className="container flex flex-col gap-12 px3">
+    <div className="container flex flex-col gap-12 px-3">
       <div className="flex flex-row items-center pt-[104px] pb-[160px]">
         <div className="flex flex-col flex-1 gap-6 ">
           {createTag("Blog Post")}
