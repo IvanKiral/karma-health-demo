@@ -7,6 +7,7 @@ import { loadPreviewApiKey } from "../utils/api";
 type AppContext = {
   environmentId: string;
   apiKey: string;
+  collection: string;
 };
 
 const defaultAppContext: AppContext = {
