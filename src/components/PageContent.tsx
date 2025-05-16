@@ -7,7 +7,7 @@ import { PortableText, PortableTextReactResolvers } from "@kontent-ai/rich-text-
 import PromotionalDisclaimer from "./disclaimer/PromotionalDisclaimer";
 import InformationalDisclaimer from "./disclaimer/InformationalDisclaimer";
 import CallToAction from "./CallToAction";
-import { createElementSmartLink, createItemSmartLink } from "../utils/smartlink";
+import { createElementSmartLink, createFixedAddSmartLink, createItemSmartLink } from "../utils/smartlink";
 
 type PageContentProps = {
   body: LandingPage["elements"]["body_copy"];
@@ -23,6 +23,7 @@ const PageContent: FC<PageContentProps> = ({ body, itemId }) => {
       {...createElementSmartLink(
         "body_copy"
       )}
+      {...createFixedAddSmartLink("end", "bottom")}
     >
       <PortableText value={portableText} components={createPortableTextComponents(body,itemId)} />
     </div>
