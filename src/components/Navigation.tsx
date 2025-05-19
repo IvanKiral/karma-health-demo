@@ -5,6 +5,7 @@ import { CollectionCodenames, LandingPage, LanguageCodenames } from "../model";
 import { DeliveryError } from "@kontent-ai/delivery-sdk";
 import { useSuspenseQueries } from "@tanstack/react-query";
 import { useAppContext } from "../context/AppContext";
+import { createPreviewLink } from "../utils/link";
 
 const Navigation: FC = () => {
   const { environmentId, apiKey, collection } = useAppContext();
@@ -43,7 +44,7 @@ const Navigation: FC = () => {
 
   const createMenuLink = (name: string, link: string) => (
     <li key={name}>
-      <NavLink to={link} className="text-xl leading-5 text-gray w-fit block hover:text-burgundy">{name}</NavLink>
+      <NavLink to={createPreviewLink(link, isPreview)} className="text-xl leading-5 text-gray w-fit block hover:text-burgundy">{name}</NavLink>
     </li>
   );
 
