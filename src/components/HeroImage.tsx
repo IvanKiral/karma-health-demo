@@ -28,10 +28,11 @@ const HeroImage: FC<HeroImageProps> = ({ data, buttonLink }) => {
           {...createItemSmartLink(data.itemId)}
           {...createElementSmartLink("subheadline")}
         >{data.subheadline?.value}</p>
-
-        <ButtonLink href={buttonLink ?? "services"}>
-          <p>Explore our services</p>
-        </ButtonLink>
+        {buttonLink != "nolink" && (
+          <ButtonLink href={buttonLink ?? "services"}>
+            <p>Explore our services</p>
+          </ButtonLink>
+        )}
       </div>
       <div className="lg:basis-1/2"
         {...createItemSmartLink(data.itemId)}
