@@ -15,7 +15,7 @@ type CallToActionProps = Readonly<{
   componentId: string | null;
 }>;
 
-const CallToAction: React.FC<CallToActionProps> = ({
+const CallToActionComponent: React.FC<CallToActionProps> = ({
   title,
   description,
   buttonText,
@@ -81,4 +81,4 @@ const CallToAction: React.FC<CallToActionProps> = ({
   );
 };
 
-export default CallToAction;
+export default CallToActionComponent;
