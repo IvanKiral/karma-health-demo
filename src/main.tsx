@@ -16,6 +16,7 @@ import PersonDetailPage from "./pages/PersonDetailPage.tsx";
 import Auth0ProviderWithRedirect from "./components/auth/AuthProviderWithRedirect.tsx";
 import { ErrorBoundary } from "react-error-boundary";
 import Loader from "./components/Loader.tsx";
+import Page from "./pages/Page.tsx";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +56,10 @@ const BaseRouting: RouteObject[] = [
   {
     path: "our-team/:slug",
     Component: PersonDetailPage,
+  },
+  {
+    path: ":slug",
+    Component: Page,
   },
   {
     path: "*",
