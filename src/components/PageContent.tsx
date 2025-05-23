@@ -12,16 +12,17 @@ import { createElementSmartLink, createFixedAddSmartLink, createItemSmartLink } 
 type PageContentProps = {
   body: LandingPage["elements"]["body_copy"];
   itemId: string;
+  elementName: string;
 };
 
-const PageContent: FC<PageContentProps> = ({ body, itemId }) => {
+const PageContent: FC<PageContentProps> = ({ body, itemId, elementName }) => {
   const portableText = transformToPortableText(body.value);
 
   return (
     <div className="pt-[104px] pb-40 flex flex-col gap-40"
       {...createItemSmartLink(itemId)}
       {...createElementSmartLink(
-        "body_copy"
+        elementName
       )}
       {...createFixedAddSmartLink("end", "bottom")}
     >

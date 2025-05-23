@@ -151,7 +151,7 @@ const Page: FC = () => {
         )
       }
       <PageSection color="bg-white">
-        <PageContent body={page.elements.body!} itemId={page.system.id} />
+        <PageContent body={page.elements.body!} itemId={page.system.id} elementName="body" />
       </PageSection>
     </div>
   );
